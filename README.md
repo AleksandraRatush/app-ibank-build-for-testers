@@ -1,0 +1,1 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/7v44u7tenppsstxv?svg=true)](https://ci.appveyor.com/project/AleksandraRatush/app-ibank-build-for-testers)
