@@ -30,7 +30,7 @@ public class TopUpPage {
     private void fillAllFields(String amount, String cardNum) {
         this.amount.click();
         String os = System.getProperty("os.name");
-        this.amount.sendKeys(Keys.chord("Mac OS X".equals(os) ? Keys.COMMAND : Keys.LEFT_CONTROL, "a"),
+        this.amount.sendKeys(Keys.chord("Mac OS X".equals(os) ? Keys.COMMAND : Keys.CONTROL, "a"),
                 Keys.BACK_SPACE);
         this.amount.setValue(amount);
         from.click();
