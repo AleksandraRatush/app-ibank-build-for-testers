@@ -10,7 +10,7 @@ build: off  # будем использовать свой скрипт сбор
 
 install:
 
-  - java -jar ./artifacts/app-ibank-build-for-testers.jar -P:profile=test &
+  - java -jar ./artifacts/app-ibank-build-for-testers.jar &
 
 build_script:
   - ./gradlew test --info -Dselenide.headless=true
