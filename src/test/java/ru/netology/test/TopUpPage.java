@@ -9,6 +9,7 @@ import static com.codeborne.selenide.Selenide.$;
 
 public class TopUpPage {
 
+    public static final String MAC_OS_X = "Mac OS X";
     private final SelenideElement amount = $("[data-test-id='amount'] .input__control");
     private final SelenideElement from = $("[data-test-id='from'] .input__control");
     private final SelenideElement actionTransfer = $("[data-test-id='action-transfer']");
@@ -30,11 +31,11 @@ public class TopUpPage {
     private void fillAllFields(String amount, String cardNum) {
         this.amount.click();
         String os = System.getProperty("os.name");
-        this.amount.sendKeys(Keys.chord("Mac OS X".equals(os) ? Keys.COMMAND : Keys.CONTROL, "a"),
+        this.amount.sendKeys(Keys.chord(MAC_OS_X.equals(os) ? Keys.COMMAND : Keys.LEFT_CONTROL, "a"),
                 Keys.BACK_SPACE);
         this.amount.setValue(amount);
         from.click();
-        from.sendKeys(Keys.chord(Keys.COMMAND, "a"), Keys.BACK_SPACE);
+        from.sendKeys(Keys.chord(MAC_OS_X.equals(os) ? Keys.COMMAND : Keys.LEFT_CONTROL, "a"), Keys.BACK_SPACE);
         from.setValue(cardNum);
     }
 
