@@ -1,126 +1,150 @@
 package ru.netology.test;
 
-import lombok.SneakyThrows;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.netology.data.User;
+import ru.netology.page.DashboardPage;
+import ru.netology.page.LoginPage;
+import ru.netology.page.TopUpPage;
 
-import static com.codeborne.selenide.Selenide.$;
+import java.util.Map;
+
 import static com.codeborne.selenide.Selenide.open;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CardTest {
 
+    private final User user = User.getInstance();
+    private DashboardPage dashboardPage;
+    private Map<String, Integer> cardBalances;
 
-    public static final String SECOND_CARD_NUMBER = "5559 0000 0000 0002";
-    public static final String FIRST_CARD_NUMBER = "5559 0000 0000 0001";
-    public static final String NOT_EXISTENT_CARD = "5559 0000 0000 0003";
 
-    @BeforeAll
-    public static void login() {
-        open("http://0.0.0.0:9999");
-        $("[data-test-id='login'] .input__control")
-                .setValue("vasya");
-        $("[data-test-id='password'] .input__control")
-                .setValue("qwerty123");
-        $("[data-test-id='action-login']").click();
-        $("[data-test-id='code'] .input__control")
-                .setValue("12345");
-        $("[data-test-id='action-verify']").click();
-
+    @BeforeEach
+    public void login() {
+        open("http://localhost:9999/");
+        dashboardPage = new LoginPage().login(user).inputCode(user);
     }
 
     @Test
     public void transferFromFirstSuccess() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(FIRST_CARD_NUMBER, SECOND_CARD_NUMBER,
-                "1000");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "9000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "11000"));
-        dashboardPage.transfer(SECOND_CARD_NUMBER, FIRST_CARD_NUMBER, "1000");
-
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        transferSuccess(cardFrom, cardTo);
     }
 
     @Test
     public void transferFromSecondSuccess() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(SECOND_CARD_NUMBER,
-                FIRST_CARD_NUMBER, "1000");
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "9000"));
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "11000"));
-        dashboardPage.transfer(FIRST_CARD_NUMBER, SECOND_CARD_NUMBER, "1000");
+        String cardFrom = user.getCards()[1];
+        String cardTo = user.getCards()[0];
+        transferSuccess(cardFrom, cardTo);
+    }
 
+    private void transferSuccess(String cardFrom, String cardTo) throws TopUpPage.TopUpPageException {
+        storeBalances(cardFrom, cardTo);
+        int amount = cardBalances.get(cardFrom) / 2;
+        dashboardPage = dashboardPage.transfer(cardFrom, cardTo,
+                String.valueOf(amount));
+        Map<String, Integer> cardBalancesAfterTransfer = dashboardPage.getCardBalances(cardFrom, cardTo);
+        assertEquals(cardBalances.get(cardFrom) - amount, cardBalancesAfterTransfer.get(cardFrom));
+        assertEquals(cardBalances.get(cardTo) + amount, cardBalancesAfterTransfer.get(cardTo));
+        dashboardPage.transfer(cardTo, cardFrom, String.valueOf(amount));
+    }
+
+    private void storeBalances(String cardFrom, String cardTo) {
+        cardBalances = dashboardPage.getCardBalances(cardFrom, cardTo);
     }
 
     @Test
     public void transferCancel() {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.cancel(FIRST_CARD_NUMBER, SECOND_CARD_NUMBER, "1000");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "10000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "10000"));
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        dashboardPage = dashboardPage.cancel(cardFrom, cardTo,
+                String.valueOf(cardBalances.get(cardFrom) / 2));
+        assertEquals(cardBalances.get(cardFrom), dashboardPage.getCardBalance(cardFrom));
+        assertEquals(cardBalances.get(cardTo), dashboardPage.getCardBalance(cardTo));
     }
 
     @Test
     public void transferWithZeroAmount() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(FIRST_CARD_NUMBER, SECOND_CARD_NUMBER, "0");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "10000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "10000"));
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        dashboardPage = dashboardPage.transfer(cardFrom, cardTo, "0");
+        checkBalanceNotChanged(cardFrom, cardTo);
     }
 
     @Test
     public void transferWithEmptyAmount() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(FIRST_CARD_NUMBER, SECOND_CARD_NUMBER, "");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "10000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "10000"));
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        dashboardPage = dashboardPage.transfer(cardFrom, cardTo, "");
+        checkBalanceNotChanged(cardFrom, cardTo);
+    }
+
+    private void checkBalanceNotChanged(String cardFrom, String cardTo) {
+        assertEquals(cardBalances.get(cardFrom), dashboardPage.getCardBalance(cardFrom));
+        assertEquals(cardBalances.get(cardTo), dashboardPage.getCardBalance(cardTo));
     }
 
     @Test
     public void transferWithNegativeAmount() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(FIRST_CARD_NUMBER,
-                SECOND_CARD_NUMBER, "-1000");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "9000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "11000"));
-        dashboardPage.transfer(SECOND_CARD_NUMBER, FIRST_CARD_NUMBER, "1000");
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        int amount = -cardBalances.get(cardTo) / 2;
+        dashboardPage = dashboardPage.transfer(cardFrom, cardTo,
+                String.valueOf(amount));
+        Map<String, Integer> cardBalancesAfterTransfer = dashboardPage.getCardBalances(cardFrom, cardTo);
+        assertEquals(cardBalances.get(cardFrom)  + amount, cardBalancesAfterTransfer.get(cardFrom));
+        assertEquals(cardBalances.get(cardTo) - amount, cardBalancesAfterTransfer.get(cardTo));
+        dashboardPage.transfer(cardTo, cardFrom, String.valueOf(amount));
 
     }
 
     @Test
     public void transferWithSameCards() throws TopUpPage.TopUpPageException {
-        DashboardPage dashboardPage = new DashboardPage();
-        dashboardPage = dashboardPage.transfer(FIRST_CARD_NUMBER, FIRST_CARD_NUMBER, "1000");
-        assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "10000"));
-        assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "10000"));
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        dashboardPage = dashboardPage.transfer(cardFrom, cardFrom, String.valueOf(cardBalances.get(cardFrom) / 2));
+        checkBalanceNotChanged(cardFrom, cardTo);
     }
 
 
     @Test
     public void transferFromNonExistentCardToFirst() {
-        DashboardPage dashboardPage = new DashboardPage();
+        String firstCard = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        String fakeCard = user.getFakeCard();
+        storeBalances(firstCard, cardTo);
         try {
-            dashboardPage.transfer(NOT_EXISTENT_CARD, FIRST_CARD_NUMBER,
-                    "1000");
+            dashboardPage.transfer(fakeCard, cardTo,
+                    String.valueOf(cardBalances.get(firstCard) / 2));
         } catch (TopUpPage.TopUpPageException e) {
             dashboardPage = new TopUpPage().cancel();
-            assertTrue(dashboardPage.checkBalance(FIRST_CARD_NUMBER, "10000"));
-            assertTrue(dashboardPage.checkBalance(SECOND_CARD_NUMBER, "10000"));
+            checkBalanceNotChanged(firstCard, cardTo);
         }
 
     }
 
     @Test
     public void transferFromFirstWithAmountOverBalance() {
-        DashboardPage dashboardPage = new DashboardPage();
-        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(FIRST_CARD_NUMBER,
-                SECOND_CARD_NUMBER, "20000"));
+        String cardFrom = user.getCards()[0];
+        String cardTo = user.getCards()[1];
+        storeBalances(cardFrom, cardTo);
+        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(cardFrom,
+                cardTo, String.valueOf(cardBalances.get(cardFrom) * 2)));
     }
 
     @Test
     public void transferFromSecondWithAmountOverBalance() {
-        DashboardPage dashboardPage = new DashboardPage();
-        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(SECOND_CARD_NUMBER,
-                FIRST_CARD_NUMBER, "20000"));
+        String cardFrom = user.getCards()[1];
+        String cardTo = user.getCards()[0];
+        storeBalances(cardFrom, cardTo);
+        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(cardFrom,
+                cardTo, String.valueOf(cardBalances.get(cardFrom) * 2)));
     }
+
 }

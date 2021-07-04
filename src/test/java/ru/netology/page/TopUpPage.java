@@ -1,4 +1,4 @@
-package ru.netology.test;
+package ru.netology.page;
 
 import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.SelenideElement;
@@ -9,7 +9,7 @@ import static com.codeborne.selenide.Selenide.$;
 
 public class TopUpPage {
 
-    public static final String MAC_OS_X = "Mac OS X";
+
     private final SelenideElement amount = $("[data-test-id='amount'] .input__control");
     private final SelenideElement from = $("[data-test-id='from'] .input__control");
     private final SelenideElement actionTransfer = $("[data-test-id='action-transfer']");
@@ -29,14 +29,18 @@ public class TopUpPage {
     }
 
     private void fillAllFields(String amount, String cardNum) {
-        this.amount.click();
-        String os = System.getProperty("os.name");
-        this.amount.sendKeys(Keys.chord(MAC_OS_X.equals(os) ? Keys.COMMAND : Keys.LEFT_CONTROL, "a"),
-                Keys.BACK_SPACE);
+        clear(this.amount);
         this.amount.setValue(amount);
-        from.click();
-        from.sendKeys(Keys.chord(MAC_OS_X.equals(os) ? Keys.COMMAND : Keys.LEFT_CONTROL, "a"), Keys.BACK_SPACE);
+        clear(from);
         from.setValue(cardNum);
+    }
+
+    private void clear(SelenideElement element) {
+        while(!element.getValue().isBlank()) {
+            element.click();
+            element.sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME, Keys.BACK_SPACE));
+        }
+
     }
 
     public DashboardPage cancel(String amount, String cardNum) {
