@@ -1,8 +1,9 @@
 package ru.netology.test;
 
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.netology.data.User;
+import ru.netology.data.DataHelper;
 import ru.netology.page.DashboardPage;
 import ru.netology.page.LoginPage;
 import ru.netology.page.TopUpPage;
@@ -14,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class CardTest {
 
-    private final User user = User.getInstance();
+    private final DataHelper.User user = DataHelper.getUser();
+    private final DataHelper.Card card = DataHelper.getCard();
     private DashboardPage dashboardPage;
     private Map<String, Integer> cardBalances;
 
@@ -22,32 +24,34 @@ public class CardTest {
     @BeforeEach
     public void login() {
         open("http://localhost:9999/");
-        dashboardPage = new LoginPage().login(user).inputCode(user);
+        dashboardPage = new LoginPage().login(user).inputCode(user.getCode());
     }
 
     @Test
-    public void transferFromFirstSuccess() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+    public void transferFromFirstSuccess() {
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         transferSuccess(cardFrom, cardTo);
     }
 
     @Test
-    public void transferFromSecondSuccess() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[1];
-        String cardTo = user.getCards()[0];
+    public void transferFromSecondSuccess() {
+        String cardFrom = card.getCards()[1];
+        String cardTo = card.getCards()[0];
         transferSuccess(cardFrom, cardTo);
     }
 
-    private void transferSuccess(String cardFrom, String cardTo) throws TopUpPage.TopUpPageException {
+    private void transferSuccess(String cardFrom, String cardTo) {
         storeBalances(cardFrom, cardTo);
         int amount = cardBalances.get(cardFrom) / 2;
-        dashboardPage = dashboardPage.transfer(cardFrom, cardTo,
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom, cardTo,
                 String.valueOf(amount));
+        dashboardPage = topUpPage.transferSuccess(String.valueOf(amount), cardFrom);
         Map<String, Integer> cardBalancesAfterTransfer = dashboardPage.getCardBalances(cardFrom, cardTo);
         assertEquals(cardBalances.get(cardFrom) - amount, cardBalancesAfterTransfer.get(cardFrom));
         assertEquals(cardBalances.get(cardTo) + amount, cardBalancesAfterTransfer.get(cardTo));
-        dashboardPage.transfer(cardTo, cardFrom, String.valueOf(amount));
+        topUpPage = dashboardPage.topUp(cardTo, cardFrom, String.valueOf(amount));
+        topUpPage.transferSuccess(String.valueOf(amount), cardTo);
     }
 
     private void storeBalances(String cardFrom, String cardTo) {
@@ -56,30 +60,36 @@ public class CardTest {
 
     @Test
     public void transferCancel() {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
-        dashboardPage = dashboardPage.cancel(cardFrom, cardTo,
-                String.valueOf(cardBalances.get(cardFrom) / 2));
+        String amount = String.valueOf(cardBalances.get(cardFrom) / 2);
+        TopUpPage topPage = dashboardPage.cancel(cardFrom, cardTo,
+                amount);
+        dashboardPage = topPage.cancel(amount, cardFrom);
         assertEquals(cardBalances.get(cardFrom), dashboardPage.getCardBalance(cardFrom));
         assertEquals(cardBalances.get(cardTo), dashboardPage.getCardBalance(cardTo));
     }
 
     @Test
-    public void transferWithZeroAmount() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+    public void transferWithZeroAmount() {
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
-        dashboardPage = dashboardPage.transfer(cardFrom, cardTo, "0");
+        String amount = "0";
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom, cardTo, amount);
+        topUpPage.transferSuccess(amount, cardFrom);
         checkBalanceNotChanged(cardFrom, cardTo);
     }
 
     @Test
-    public void transferWithEmptyAmount() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+    public void transferWithEmptyAmount() {
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
-        dashboardPage = dashboardPage.transfer(cardFrom, cardTo, "");
+        String amount = "";
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom, cardTo, amount);
+        dashboardPage = topUpPage.transferSuccess(amount, cardFrom);
         checkBalanceNotChanged(cardFrom, cardTo);
     }
 
@@ -89,62 +99,66 @@ public class CardTest {
     }
 
     @Test
-    public void transferWithNegativeAmount() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+    public void transferWithNegativeAmount() {
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
         int amount = -cardBalances.get(cardTo) / 2;
-        dashboardPage = dashboardPage.transfer(cardFrom, cardTo,
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom, cardTo,
                 String.valueOf(amount));
+        dashboardPage = topUpPage.transferSuccess(String.valueOf(amount), cardFrom);
         Map<String, Integer> cardBalancesAfterTransfer = dashboardPage.getCardBalances(cardFrom, cardTo);
-        assertEquals(cardBalances.get(cardFrom)  + amount, cardBalancesAfterTransfer.get(cardFrom));
+        assertEquals(cardBalances.get(cardFrom) + amount, cardBalancesAfterTransfer.get(cardFrom));
         assertEquals(cardBalances.get(cardTo) - amount, cardBalancesAfterTransfer.get(cardTo));
-        dashboardPage.transfer(cardTo, cardFrom, String.valueOf(amount));
+        dashboardPage.topUp(cardTo, cardFrom, String.valueOf(amount));
 
     }
 
     @Test
-    public void transferWithSameCards() throws TopUpPage.TopUpPageException {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+    public void transferWithSameCards() {
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
-        dashboardPage = dashboardPage.transfer(cardFrom, cardFrom, String.valueOf(cardBalances.get(cardFrom) / 2));
+        String amount = String.valueOf(cardBalances.get(cardFrom) / 2);
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom, cardFrom,
+                amount);
+        topUpPage.transferSuccess(amount, cardFrom);
         checkBalanceNotChanged(cardFrom, cardTo);
     }
 
-
     @Test
     public void transferFromNonExistentCardToFirst() {
-        String firstCard = user.getCards()[0];
-        String cardTo = user.getCards()[1];
-        String fakeCard = user.getFakeCard();
+        String firstCard = card.getCards()[0];
+        String cardTo = card.getCards()[1];
+        String fakeCard = card.getFakeCard();
         storeBalances(firstCard, cardTo);
-        try {
-            dashboardPage.transfer(fakeCard, cardTo,
-                    String.valueOf(cardBalances.get(firstCard) / 2));
-        } catch (TopUpPage.TopUpPageException e) {
-            dashboardPage = new TopUpPage().cancel();
-            checkBalanceNotChanged(firstCard, cardTo);
-        }
-
+        String amount = String.valueOf(cardBalances.get(firstCard) / 2);
+        TopUpPage topUpPage = dashboardPage.topUp(fakeCard, cardTo,
+                amount);
+        topUpPage.transferError(amount, fakeCard);
     }
 
     @Test
     public void transferFromFirstWithAmountOverBalance() {
-        String cardFrom = user.getCards()[0];
-        String cardTo = user.getCards()[1];
+        String cardFrom = card.getCards()[0];
+        String cardTo = card.getCards()[1];
         storeBalances(cardFrom, cardTo);
-        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(cardFrom,
-                cardTo, String.valueOf(cardBalances.get(cardFrom) * 2)));
+        storeBalances(cardFrom, cardTo);
+        String amount = String.valueOf(cardBalances.get(cardFrom) * 2);
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom,
+                cardTo, amount);
+        topUpPage.transferError(amount, cardFrom);
     }
 
     @Test
     public void transferFromSecondWithAmountOverBalance() {
-        String cardFrom = user.getCards()[1];
-        String cardTo = user.getCards()[0];
+        String cardFrom = card.getCards()[1];
+        String cardTo = card.getCards()[0];
         storeBalances(cardFrom, cardTo);
-        assertThrows(TopUpPage.TopUpPageException.class, () -> dashboardPage.transfer(cardFrom,
-                cardTo, String.valueOf(cardBalances.get(cardFrom) * 2)));
+        String amount = String.valueOf(cardBalances.get(cardFrom) * 2);
+        TopUpPage topUpPage = dashboardPage.topUp(cardFrom,
+                cardTo, amount);
+        topUpPage.transferError(amount, cardFrom);
     }
 
 }

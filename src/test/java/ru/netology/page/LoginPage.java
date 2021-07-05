@@ -1,7 +1,8 @@
 package ru.netology.page;
 
 import com.codeborne.selenide.SelenideElement;
-import ru.netology.data.User;
+import ru.netology.data.DataHelper;
+
 
 import static com.codeborne.selenide.Selenide.$;
 
@@ -14,7 +15,7 @@ public class LoginPage {
 
 
 
-    public CodePage login(User user) {
+    public CodePage login(DataHelper.User user) {
         login.setValue(user.getName());
         password.setValue(user.getPassword());
         actionLogin.click();

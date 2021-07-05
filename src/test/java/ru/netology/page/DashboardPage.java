@@ -21,19 +21,17 @@ public class DashboardPage {
     private final String balanceStart = "баланс: ";
     private final String balanceFinish = " р.";
 
-    public DashboardPage transfer(String cardFrom, String cardTo, String amount) throws TopUpPage.TopUpPageException {
+    public TopUpPage topUp(String cardFrom, String cardTo, String amount) {
         SelenideElement element = getCardElement(cardTo);
         element.find(".button__text").click();
-        TopUpPage topUpPage = new TopUpPage();
-        return topUpPage.transfer(amount, cardFrom);
+        return new TopUpPage();
     }
 
 
-    public DashboardPage cancel(String cardFrom, String cardTo, String amount) {
+    public TopUpPage cancel(String cardFrom, String cardTo, String amount) {
         SelenideElement element = getCardElement(cardTo);
         element.find(".button__text").click();
-        TopUpPage topUpPage = new TopUpPage();
-        return topUpPage.cancel(amount, cardFrom);
+        return new TopUpPage();
     }
 
     public int getCardBalance(String cardNum) {
